@@ -15,6 +15,7 @@ import { configService } from './services/config';
 import { apiService } from './services/api';
 import { themeService } from './services/theme';
 import { coworkService } from './services/cowork';
+import { authService } from './services/auth';
 import { scheduledTaskService } from './services/scheduledTask';
 import { checkForAppUpdate, type AppUpdateInfo, type AppUpdateDownloadProgress, UPDATE_POLL_INTERVAL_MS, UPDATE_HEARTBEAT_INTERVAL_MS } from './services/appUpdate';
 import { defaultConfig } from './config';
@@ -97,7 +98,11 @@ const App: React.FC = () => {
         // 初始化语言
         console.info('[App] initializeApp: i18nService.initialize');
         await waitWithTimeout(i18nService.initialize(), 5000, 'i18nService.initialize');
-        
+
+        // 初始化认证服务（恢复登录状态）
+        console.info('[App] initializeApp: authService.init');
+        await authService.init();
+
         console.info('[App] initializeApp: configService.getConfig');
         const config = await configService.getConfig();
         
