@@ -276,6 +276,7 @@ interface IElectronAPI {
       getStatus: () => Promise<{ success: boolean; status?: OpenClawEngineStatus; error?: string }>;
       install: () => Promise<{ success: boolean; status?: OpenClawEngineStatus; error?: string }>;
       retryInstall: () => Promise<{ success: boolean; status?: OpenClawEngineStatus; error?: string }>;
+      restartGateway: () => Promise<{ success: boolean; status?: OpenClawEngineStatus; error?: string }>;
       onProgress: (callback: (status: OpenClawEngineStatus) => void) => () => void;
     };
   };
