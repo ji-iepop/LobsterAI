@@ -796,6 +796,7 @@ export class OpenClawRuntimeAdapter extends EventEmitter implements CoworkRuntim
       // Incremental sync for already-known sessions: check if the gateway has messages
       // that weren't picked up during initial sync or real-time events.
       if (channelCount > 0) {
+        const syncedThisCycle = new Set<string>();
         for (const row of sessions) {
           const key = typeof row?.key === 'string' ? row.key : '';
           if (!key) continue;
@@ -804,6 +805,11 @@ export class OpenClawRuntimeAdapter extends EventEmitter implements CoworkRuntim
           if (this.heartbeatSessionKeys.has(key)) continue;
           const sessionId = this.sessionIdBySessionKey.get(key);
           if (!sessionId || !this.fullySyncedSessions.has(sessionId)) continue;
+          // Deduplicate: only sync each sessionId once per poll cycle to prevent
+          // duplicate messages when multiple gateway keys map to the same session
+          // (e.g. after agent binding change).
+          if (syncedThisCycle.has(sessionId)) continue;
+          syncedThisCycle.add(sessionId);
           // Skip sessions with an active turn (they handle their own sync)
           if (this.activeTurns.has(sessionId)) continue;
           try {

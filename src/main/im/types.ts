@@ -382,6 +382,7 @@ export interface IMSessionMapping {
   imConversationId: string;
   platform: IMPlatform;
   coworkSessionId: string;
+  agentId: string;
   createdAt: number;
   lastActiveAt: number;
 }

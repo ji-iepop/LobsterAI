@@ -241,11 +241,30 @@ export class OpenClawChannelSessionSync {
 
     // 4. Check persistent mapping in im_session_mappings
     const existingMapping = this.imStore.getSessionMapping(parsed.conversationId, parsed.platform);
-    console.log('[ChannelSessionSync] existing mapping:', existingMapping ? `coworkSessionId=${existingMapping.coworkSessionId}` : 'none');
+    console.log('[ChannelSessionSync] existing mapping:', existingMapping ? `coworkSessionId=${existingMapping.coworkSessionId} agentId=${existingMapping.agentId}` : 'none');
     if (existingMapping) {
       // Verify the Cowork session still exists
       const session = this.coworkStore.getSession(existingMapping.coworkSessionId);
       if (session) {
+        // Check if the agent binding has changed since this mapping was created
+        const imSettings = this.imStore.getIMSettings();
+        const currentAgentId = imSettings.platformAgentBindings?.[parsed.platform] || 'main';
+        if (existingMapping.agentId !== currentAgentId) {
+          // Agent binding changed → create a new session under the new agent
+          console.log('[ChannelSessionSync] agent binding changed:', existingMapping.agentId, '→', currentAgentId, '— creating new session');
+          const titlePrefix = CHANNEL_TITLE_PREFIX[parsed.platform] || `[${parsed.platform}]`;
+          const displayId = parsed.conversationId.includes('@')
+            ? parsed.conversationId.split('@')[0]
+            : parsed.conversationId;
+          const shortId = displayId.length > 12 ? displayId.slice(-12) : displayId;
+          const title = `${titlePrefix} ${shortId}`;
+          const cwd = this.getDefaultCwd();
+          const newSession = this.coworkStore.createSession(title, cwd, '', 'local', [], currentAgentId);
+          console.log('[ChannelSessionSync] created new session for agent change:', newSession.id);
+          this.imStore.updateSessionMappingTarget(parsed.conversationId, parsed.platform, newSession.id, currentAgentId);
+          this.syncedSessionKeys.set(sessionKey, newSession.id);
+          return newSession.id;
+        }
         console.log('[ChannelSessionSync] existing cowork session found, reusing:', existingMapping.coworkSessionId);
         this.syncedSessionKeys.set(sessionKey, existingMapping.coworkSessionId);
         this.imStore.updateSessionLastActive(parsed.conversationId, parsed.platform);
@@ -279,7 +298,7 @@ export class OpenClawChannelSessionSync {
     );
 
     // 6. Persist mapping
-    this.imStore.createSessionMapping(parsed.conversationId, parsed.platform, session.id);
+    this.imStore.createSessionMapping(parsed.conversationId, parsed.platform, session.id, agentId);
     console.log('[ChannelSessionSync] persisted mapping: conversationId=', parsed.conversationId, '→ sessionId=', session.id);
 
     // 7. Cache
